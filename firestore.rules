@@ -1,0 +1,318 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Global Default-Deny Safety Net ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidAdminKey(id) {
+      return id is string
+        && id.size() >= 1
+        && id.size() <= 160
+        && id.matches('^[a-zA-Z0-9_\\-@.]+$')
+        && !id.matches('.*\\.\\..*');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'chethanb187@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+      );
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'designation', 'department', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'name', 'email', 'designation', 'department', 'createdAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 160
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.designation in ['Principal', 'HOD', 'Faculty Advisor', 'Student Coordinator']
+        && data.department is string && data.department.size() >= 2 && data.department.size() <= 140
+        && data.createdAt is timestamp;
+    }
+
+    function isValidClubMember(data) {
+      return data.keys().hasAll(['name', 'usn', 'email', 'semester', 'domain', 'clubRole', 'joinedAt', 'attendanceRate', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'name', 'usn', 'email', 'semester', 'domain', 'clubRole', 'joinedAt', 'attendanceRate', 'githubHandle', 'bio', 'createdAt'])
+        && (!('uid' in data) || (data.uid is string && data.uid.size() <= 128))
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && data.usn is string && data.usn.size() >= 4 && data.usn.size() <= 20 && data.usn.matches('^[A-Z0-9]+$')
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.semester is string && data.semester.size() >= 2 && data.semester.size() <= 40
+        && data.domain is string && data.domain.size() >= 2 && data.domain.size() <= 60
+        && data.clubRole in ['Club Head', 'Domain Lead', 'Member']
+        && data.joinedAt is string && data.joinedAt.size() >= 4 && data.joinedAt.size() <= 40
+        && data.attendanceRate is number && data.attendanceRate >= 0 && data.attendanceRate <= 100
+        && (!('githubHandle' in data) || (data.githubHandle is string && data.githubHandle.size() <= 80))
+        && (!('bio' in data) || (data.bio is string && data.bio.size() <= 320))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidClubHeadPublic(data) {
+      return data.keys().hasAll(['name', 'semester', 'domain', 'clubRole', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'semester', 'domain', 'clubRole', 'updatedAt'])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && data.semester is string && data.semester.size() >= 2 && data.semester.size() <= 40
+        && data.domain is string && data.domain.size() >= 2 && data.domain.size() <= 60
+        && data.clubRole in ['Club Head', 'Domain Lead']
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidJoinRequest(data) {
+      return data.keys().hasAll(['uid', 'name', 'usn', 'email', 'semester', 'domain', 'statement', 'status', 'submittedAt', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'name', 'usn', 'email', 'semester', 'domain', 'statement', 'status', 'submittedAt', 'reviewedBy', 'createdAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && data.usn is string && data.usn.size() >= 4 && data.usn.size() <= 20 && data.usn.matches('^[A-Z0-9]+$')
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.semester is string && data.semester.size() >= 2 && data.semester.size() <= 40
+        && data.domain is string && data.domain.size() >= 2 && data.domain.size() <= 60
+        && data.statement is string && data.statement.size() >= 5 && data.statement.size() <= 500
+        && data.status in ['pending', 'approved', 'rejected']
+        && data.submittedAt is string && data.submittedAt.size() >= 4 && data.submittedAt.size() <= 40
+        && (!('reviewedBy' in data) || (data.reviewedBy is string && data.reviewedBy.size() <= 120))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidClubEvent(data) {
+      return data.keys().hasAll(['title', 'category', 'date', 'time', 'venue', 'seatsTotal', 'seatsRemaining', 'coordinator', 'summary', 'agenda', 'createdAt'])
+        && data.keys().hasOnly(['title', 'category', 'date', 'time', 'venue', 'seatsTotal', 'seatsRemaining', 'coordinator', 'summary', 'agenda', 'featured', 'image', 'createdAt'])
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 160
+        && data.category in ['Hackathon', 'Workshop', 'Study Jam', 'Tech Talk']
+        && data.date is string && data.date.size() >= 3 && data.date.size() <= 40
+        && data.time is string && data.time.size() >= 3 && data.time.size() <= 50
+        && data.venue is string && data.venue.size() >= 3 && data.venue.size() <= 140
+        && data.seatsTotal is number && data.seatsTotal >= 1 && data.seatsTotal <= 5000
+        && data.seatsRemaining is number && data.seatsRemaining >= 0 && data.seatsRemaining <= data.seatsTotal
+        && data.coordinator is string && data.coordinator.size() >= 2 && data.coordinator.size() <= 100
+        && data.summary is string && data.summary.size() >= 10 && data.summary.size() <= 600
+        && data.agenda is list && data.agenda.size() >= 1 && data.agenda.size() <= 15 && data.agenda[0] is string
+        && (!('featured' in data) || data.featured is bool)
+        && (!('image' in data) || (data.image is string && data.image.size() <= 300))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidRegistration(data) {
+      return data.keys().hasAll(['uid', 'eventId', 'eventTitle', 'eventDate', 'eventVenue', 'studentName', 'usn', 'email', 'semester', 'passCode', 'checkedIn', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'eventId', 'eventTitle', 'eventDate', 'eventVenue', 'studentName', 'usn', 'email', 'semester', 'track', 'passCode', 'checkedIn', 'createdAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.eventId is string && data.eventId.size() >= 1 && data.eventId.size() <= 128
+        && data.eventTitle is string && data.eventTitle.size() >= 2 && data.eventTitle.size() <= 160
+        && data.eventDate is string && data.eventDate.size() >= 2 && data.eventDate.size() <= 40
+        && data.eventVenue is string && data.eventVenue.size() >= 2 && data.eventVenue.size() <= 140
+        && data.studentName is string && data.studentName.size() >= 2 && data.studentName.size() <= 120
+        && data.usn is string && data.usn.size() >= 4 && data.usn.size() <= 20
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.semester is string && data.semester.size() >= 2 && data.semester.size() <= 40
+        && (!('track' in data) || (data.track is string && data.track.size() <= 60))
+        && data.passCode is string && data.passCode.size() >= 4 && data.passCode.size() <= 20
+        && data.checkedIn is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['uid', 'title', 'domain', 'semester', 'contributors', 'stack', 'summary', 'repoSlug', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'title', 'domain', 'semester', 'contributors', 'stack', 'summary', 'architectureNote', 'impactMetric', 'repoSlug', 'featured', 'image', 'createdAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 160
+        && data.domain in ['AI & ML', 'Web & Cloud', 'Systems & IoT', 'Campus Tools']
+        && data.semester is string && data.semester.size() >= 2 && data.semester.size() <= 40
+        && data.contributors is string && data.contributors.size() >= 2 && data.contributors.size() <= 180
+        && data.stack is list && data.stack.size() >= 1 && data.stack.size() <= 12 && data.stack[0] is string
+        && data.summary is string && data.summary.size() >= 10 && data.summary.size() <= 600
+        && (!('architectureNote' in data) || (data.architectureNote is string && data.architectureNote.size() <= 400))
+        && (!('impactMetric' in data) || (data.impactMetric is string && data.impactMetric.size() <= 200))
+        && data.repoSlug is string && data.repoSlug.size() >= 3 && data.repoSlug.size() <= 140
+        && (!('featured' in data) || data.featured is bool)
+        && (!('image' in data) || (data.image is string && data.image.size() <= 300))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidInquiry(data) {
+      return data.keys().hasAll(['uid', 'referenceId', 'name', 'email', 'topic', 'message', 'status', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'referenceId', 'name', 'email', 'usn', 'topic', 'message', 'status', 'createdAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.referenceId is string && data.referenceId.size() >= 4 && data.referenceId.size() <= 20
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && (!('usn' in data) || (data.usn is string && data.usn.size() <= 20))
+        && data.topic is string && data.topic.size() >= 2 && data.topic.size() <= 100
+        && data.message is string && data.message.size() >= 10 && data.message.size() <= 1000
+        && data.status in ['open', 'reviewed']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidClubStats(data) {
+      return data.keys().hasAll(['totalMembers', 'totalHeads', 'totalEvents', 'totalRegistrations', 'updatedAt'])
+        && data.keys().hasOnly(['totalMembers', 'totalHeads', 'totalEvents', 'totalRegistrations', 'updatedAt'])
+        && data.totalMembers is number && data.totalMembers >= 0
+        && data.totalHeads is number && data.totalHeads >= 0
+        && data.totalEvents is number && data.totalEvents >= 0
+        && data.totalRegistrations is number && data.totalRegistrations >= 0
+        && data.updatedAt is timestamp;
+    }
+
+    // --- Connection Probe (read-only) ---
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // --- Collection Rules ---
+
+    match /admins/{adminKey} {
+      allow get: if isValidAdminKey(adminKey) && (
+        isAdmin() ||
+        (isSignedIn() && (adminKey == request.auth.uid || adminKey == request.auth.token.email))
+      );
+      allow list: if isAdmin();
+      allow create: if isValidAdminKey(adminKey) && isAdmin() && isValidAdminUser(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidAdminKey(adminKey) && isAdmin() && isValidAdminUser(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidAdminKey(adminKey) && isAdmin();
+    }
+
+    match /members/{memberId} {
+      allow get: if isValidId(memberId) && (
+        isAdmin() ||
+        (isSignedIn() && (existing().uid == request.auth.uid || existing().email == request.auth.token.email))
+      );
+      allow list: if isAdmin() || (
+        isSignedIn() && (resource.data.uid == request.auth.uid || resource.data.email == request.auth.token.email)
+      );
+      allow create: if isValidId(memberId) && isAdmin() && isValidClubMember(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(memberId) && isValidClubMember(incoming()) && (
+        (isAdmin() && incoming().createdAt == existing().createdAt) ||
+        (isSignedIn()
+          && (existing().uid == request.auth.uid || existing().email == request.auth.token.email)
+          && (!('uid' in incoming()) || incoming().uid == request.auth.uid)
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['uid', 'domain', 'semester', 'githubHandle', 'bio']))
+      );
+      allow delete: if isValidId(memberId) && isAdmin();
+    }
+
+    match /clubHeads/{headId} {
+      allow get: if isValidId(headId);
+      allow list: if true;
+      allow create, update: if isValidId(headId) && isAdmin() && isValidClubHeadPublic(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(headId) && isAdmin();
+    }
+
+    match /joinRequests/{requestId} {
+      allow get: if isValidId(requestId) && (isAdmin() || (isSignedIn() && existing().uid == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(requestId)
+        && isSignedIn()
+        && isValidJoinRequest(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(requestId)
+        && isValidJoinRequest(incoming())
+        && isAdmin()
+        && existing().status == 'pending'
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'reviewedBy']);
+      allow delete: if isValidId(requestId) && isAdmin();
+    }
+
+    match /events/{eventId} {
+      allow get: if isValidId(eventId);
+      allow list: if true;
+      allow create: if isValidId(eventId) && isAdmin() && isValidClubEvent(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(eventId) && isValidClubEvent(incoming()) && (
+        (isAdmin() && incoming().createdAt == existing().createdAt) ||
+        (isSignedIn()
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['seatsRemaining'])
+          && (incoming().seatsRemaining == existing().seatsRemaining - 1 || incoming().seatsRemaining == existing().seatsRemaining + 1))
+      );
+      allow delete: if isValidId(eventId) && isAdmin();
+    }
+
+    match /registrations/{registrationId} {
+      allow get: if isValidId(registrationId) && (isAdmin() || (isSignedIn() && existing().uid == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(registrationId)
+        && isSignedIn()
+        && isValidRegistration(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().checkedIn == false
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/events/$(incoming().eventId));
+      allow update: if isValidId(registrationId)
+        && isValidRegistration(incoming())
+        && isAdmin()
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['checkedIn']);
+      allow delete: if isValidId(registrationId) && (isAdmin() || (isSignedIn() && existing().uid == request.auth.uid));
+    }
+
+    match /projects/{projectId} {
+      allow get: if isValidId(projectId);
+      allow list: if true;
+      allow create: if isValidId(projectId)
+        && isSignedIn()
+        && isValidProject(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(projectId)
+        && isValidProject(incoming())
+        && (isAdmin() || (isSignedIn() && existing().uid == request.auth.uid && incoming().uid == existing().uid))
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(projectId) && (isAdmin() || (isSignedIn() && existing().uid == request.auth.uid));
+    }
+
+    match /inquiries/{inquiryId} {
+      allow get: if isValidId(inquiryId) && (isAdmin() || (isSignedIn() && existing().uid == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(inquiryId)
+        && isSignedIn()
+        && isValidInquiry(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().status == 'open'
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(inquiryId)
+        && isValidInquiry(incoming())
+        && isAdmin()
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+      allow delete: if isValidId(inquiryId) && isAdmin();
+    }
+
+    match /meta/{docId} {
+      allow get: if docId == 'clubStats';
+      allow create: if docId == 'clubStats' && isAdmin() && isValidClubStats(incoming()) && incoming().updatedAt == request.time;
+      allow update: if docId == 'clubStats' && isValidClubStats(incoming()) && incoming().updatedAt == request.time && (
+        isAdmin() ||
+        (isSignedIn()
+          && incoming().diff(existing()).affectedKeys().hasOnly(['totalRegistrations', 'updatedAt'])
+          && (incoming().totalRegistrations == existing().totalRegistrations + 1 || incoming().totalRegistrations == existing().totalRegistrations - 1))
+      );
+    }
+  }
+}

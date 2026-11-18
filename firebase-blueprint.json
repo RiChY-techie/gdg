@@ -1,0 +1,204 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized governance administrator (Principal, CSE HOD, Faculty Advisor, or Student Coordinator).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "designation": {
+          "type": "string",
+          "enum": ["Principal", "HOD", "Faculty Advisor", "Student Coordinator"]
+        },
+        "department": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "designation", "department", "createdAt"]
+    },
+    "ClubMember": {
+      "title": "ClubMember",
+      "description": "Approved CSE Department Club student member with private PII isolated to owners and admins.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "usn": { "type": "string", "minLength": 4, "maxLength": 20, "pattern": "^[A-Z0-9]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "semester": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "domain": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "clubRole": { "type": "string", "enum": ["Club Head", "Domain Lead", "Member"] },
+        "joinedAt": { "type": "string", "maxLength": 40 },
+        "attendanceRate": { "type": "number" },
+        "githubHandle": { "type": "string", "maxLength": 80 },
+        "bio": { "type": "string", "maxLength": 320 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "usn", "email", "semester", "domain", "clubRole", "joinedAt", "attendanceRate", "createdAt"]
+    },
+    "ClubHeadPublic": {
+      "title": "ClubHeadPublic",
+      "description": "Public non-PII directory entry for designated Club Heads and Domain Leads.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "semester": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "domain": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "clubRole": { "type": "string", "enum": ["Club Head", "Domain Lead"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "semester", "domain", "clubRole", "updatedAt"]
+    },
+    "JoinRequest": {
+      "title": "JoinRequest",
+      "description": "Student membership application awaiting Principal, HOD, or Coordinator approval.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "usn": { "type": "string", "minLength": 4, "maxLength": 20, "pattern": "^[A-Z0-9]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "semester": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "domain": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "statement": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "submittedAt": { "type": "string", "maxLength": 40 },
+        "reviewedBy": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "usn", "email", "semester", "domain", "statement", "status", "submittedAt", "createdAt"]
+    },
+    "ClubEvent": {
+      "title": "ClubEvent",
+      "description": "Technical club workshop, study jam, tech talk, or CODESTORM hackathon.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "category": { "type": "string", "enum": ["Hackathon", "Workshop", "Study Jam", "Tech Talk"] },
+        "date": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "time": { "type": "string", "minLength": 3, "maxLength": 50 },
+        "venue": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "seatsTotal": { "type": "number" },
+        "seatsRemaining": { "type": "number" },
+        "coordinator": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "summary": { "type": "string", "minLength": 10, "maxLength": 600 },
+        "agenda": { "type": "array" },
+        "featured": { "type": "boolean" },
+        "image": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "category", "date", "time", "venue", "seatsTotal", "seatsRemaining", "coordinator", "summary", "agenda", "createdAt"]
+    },
+    "EventRegistration": {
+      "title": "EventRegistration",
+      "description": "Participant seat reservation and check-in pass for a club event.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "eventId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "eventTitle": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "eventDate": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "eventVenue": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "studentName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "usn": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "semester": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "track": { "type": "string", "maxLength": 60 },
+        "passCode": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "checkedIn": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "eventId", "eventTitle", "eventDate", "eventVenue", "studentName", "usn", "email", "semester", "passCode", "checkedIn", "createdAt"]
+    },
+    "StudentProject": {
+      "title": "StudentProject",
+      "description": "Open-source student engineering project showcased on the club portal.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "domain": { "type": "string", "enum": ["AI & ML", "Web & Cloud", "Systems & IoT", "Campus Tools"] },
+        "semester": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "contributors": { "type": "string", "minLength": 2, "maxLength": 180 },
+        "stack": { "type": "array" },
+        "summary": { "type": "string", "minLength": 10, "maxLength": 600 },
+        "architectureNote": { "type": "string", "maxLength": 400 },
+        "impactMetric": { "type": "string", "maxLength": 200 },
+        "repoSlug": { "type": "string", "maxLength": 140 },
+        "featured": { "type": "boolean" },
+        "image": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "title", "domain", "semester", "contributors", "stack", "summary", "repoSlug", "createdAt"]
+    },
+    "ContactInquiry": {
+      "title": "ContactInquiry",
+      "description": "Contact or workshop proposal message stored for admin review.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "referenceId": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "usn": { "type": "string", "maxLength": 20 },
+        "topic": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "message": { "type": "string", "minLength": 10, "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["open", "reviewed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "referenceId", "name", "email", "topic", "message", "status", "createdAt"]
+    },
+    "ClubStats": {
+      "title": "ClubStats",
+      "description": "Public aggregate club counters without PII.",
+      "type": "object",
+      "properties": {
+        "totalMembers": { "type": "number" },
+        "totalHeads": { "type": "number" },
+        "totalEvents": { "type": "number" },
+        "totalRegistrations": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["totalMembers", "totalHeads", "totalEvents", "totalRegistrations", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Trusted administrator profiles (Principal, HOD, Faculty Advisor, Student Coordinator)."
+    },
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/ClubMember" },
+      "description": "Approved CSE Club student members with PII restricted to owner and admins."
+    },
+    "/clubHeads/{headId}": {
+      "schema": { "$ref": "#/entities/ClubHeadPublic" },
+      "description": "Public non-PII roster of designated Club Heads and Domain Leads."
+    },
+    "/joinRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/JoinRequest" },
+      "description": "Student club membership requests awaiting admin approval."
+    },
+    "/events/{eventId}": {
+      "schema": { "$ref": "#/entities/ClubEvent" },
+      "description": "Publicly readable club events and CODESTORM 2026 schedule."
+    },
+    "/registrations/{registrationId}": {
+      "schema": { "$ref": "#/entities/EventRegistration" },
+      "description": "Participant event registrations and check-in status."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/StudentProject" },
+      "description": "Student open-source engineering builds."
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": { "$ref": "#/entities/ContactInquiry" },
+      "description": "Contact and proposal submissions for admin review."
+    },
+    "/meta/{docId}": {
+      "schema": { "$ref": "#/entities/ClubStats" },
+      "description": "Public aggregate club statistics document (clubStats)."
+    }
+  }
+}

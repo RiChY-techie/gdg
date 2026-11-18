@@ -1,0 +1,8 @@
+{
+  "name": "RIT CSE Guild — GDG on Campus RIT Hassan",
+  "description": "Official Computer Science and Engineering Department Student Club and GDG on Campus – RIT Hassan portal featuring CODESTORM 2026, workshops, student projects, and technical mentorship.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
